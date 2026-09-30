@@ -23,8 +23,22 @@
         <div id="unity-build-title">조선사격장 화포청</div>
       </div>
     </div>
+    <div id="mobile-notice" hidden role="dialog" aria-modal="true" aria-labelledby="mobile-notice-title">
+      <div id="mobile-notice-panel">
+        <h1 id="mobile-notice-title">모바일 환경 안내</h1>
+        <p>현재 모바일 환경에서는 원활한 플레이가 어려울 수 있습니다.<br>PC 환경에서 플레이하는 것을 권장합니다.</p>
+        <button id="mobile-play-button" type="button">그래도 플레이</button>
+      </div>
+    </div>
     <script>
       var canvas = document.querySelector("#unity-canvas");
+      var unityContainer = document.querySelector("#unity-container");
+      var mobileNotice = document.querySelector("#mobile-notice");
+      var unityLoadStarted = false;
+      var mobileUserAgent = navigator.userAgent || "";
+      var isMobileBrowser = (navigator.userAgentData && navigator.userAgentData.mobile === true) ||
+        /Android|iPhone|iPad|iPod|Mobile|IEMobile|Opera Mini/i.test(mobileUserAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
       // Shows a temporary message banner/ribbon for a few seconds, or
       // a permanent error message on top of the canvas if type=='error'.
@@ -87,7 +101,7 @@
       // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
       // expected to change.
 
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      if (isMobileBrowser) {
         // Mobile device style: fill the whole browser client area with the game canvas:
 
         var meta = document.createElement('meta');
@@ -108,25 +122,42 @@
         canvas.style.height = "720px";
       }
 
-      document.querySelector("#unity-loading-bar").style.display = "block";
+      function startUnity() {
+        if (unityLoadStarted) return;
+        unityLoadStarted = true;
+        mobileNotice.remove();
+        unityContainer.style.display = "";
+        document.querySelector("#unity-loading-bar").style.display = "block";
 
-      var script = document.createElement("script");
-      script.src = loaderUrl;
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
-              }).then((unityInstance) => {
-                document.querySelector("#unity-loading-bar").style.display = "none";
-                document.querySelector("#unity-fullscreen-button").onclick = () => {
-                  unityInstance.SetFullscreen(1);
-                };
+        var script = document.createElement("script");
+        script.src = loaderUrl;
+        script.onload = () => {
+          createUnityInstance(canvas, config, (progress) => {
+            document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
+                }).then((unityInstance) => {
+                  document.querySelector("#unity-loading-bar").style.display = "none";
+                  document.querySelector("#unity-fullscreen-button").onclick = () => {
+                    unityInstance.SetFullscreen(1);
+                  };
 
-              }).catch((message) => {
-                alert(message);
-              });
-            };
+                }).catch((message) => {
+                  alert(message);
+                });
+              };
 
-      document.body.appendChild(script);
+        document.body.appendChild(script);
+      }
+
+      if (isMobileBrowser) {
+        unityContainer.style.display = "none";
+        mobileNotice.hidden = false;
+        document.querySelector("#mobile-play-button").addEventListener("click", function () {
+          this.disabled = true;
+          startUnity();
+        }, { once: true });
+      } else {
+        startUnity();
+      }
 
     </script>
   </body>
